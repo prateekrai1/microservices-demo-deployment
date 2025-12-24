@@ -8,28 +8,40 @@ build:
   # https://skaffold.dev/docs/concepts/#image-repository-handling
     - image: adservice
       context: src/adservice
+      kaniko: {}
     - image: cartservice
       context: src/cartservice
+      kaniko: {}
     - image: checkoutservice
       context: src/checkoutservice
+      kaniko: {}
     - image: currencyservice
       context: src/currencyservice
+      kaniko: {}
     - image: emailservice
       context: src/emailservice
+      kaniko: {}
     - image: frontend
       context: src/frontend
+      kaniko: {}
     - image: loadgenerator
       context: src/loadgenerator
+      kaniko: {}
     - image: paymentservice
       context: src/paymentservice
+      kaniko: {}
     - image: productcatalogservice
       context: src/productcatalogservice
+      kaniko: {}
     - image: recommendationservice
       context: src/recommendationservice
+      kaniko: {}
     - image: shippingservice
       context: src/shippingservice
+      kaniko: {}
     - image: invoiceservice
       context: src/invoiceservice
+      kaniko: {}
   tagPolicy:
     gitCommit: {}
   local:
