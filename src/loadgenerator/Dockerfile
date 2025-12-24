@@ -15,9 +15,11 @@ RUN pip install --prefix="/install" -r requirements.txt
 FROM base
 COPY --from=builder /install /usr/local
 
-COPY . .
-RUN chmod +x ./loadgen.sh
+WORKDIR /app
+COPY . /app
+RUN chmod +x /app/loadgen.sh
 RUN apt-get -qq update \
-    && apt-get install -y --no-install-recommends \
-    curl
-ENTRYPOINT ./loadgen.sh
+  && apt-get install -y --no-install-recommends curl bash \
+  && rm -rf /var/lib/apt/lists/*
+
+ENTRYPOINT ["/app/loadgen.sh"]

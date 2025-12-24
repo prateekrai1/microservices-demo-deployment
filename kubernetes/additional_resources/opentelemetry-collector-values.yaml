@@ -1,0 +1,125 @@
+mode: deployment
+presets:
+  kubernetesAttributes:
+    enabled: true
+
+serviceAccount:
+  # Specifies whether a service account should be created.
+  create: true
+
+extraEnvs:
+  - name: HONEYCOMB_API_KEY
+    valueFrom:
+      secretKeyRef:
+        name: honeycomb
+        key: api-key
+
+resources:
+  limits:
+    cpu: 500m
+    memory: 2Gi
+  requests:
+    cpu: 200m
+    memory: 400Mi
+      
+# disable ports that are not required
+ports:
+  jaeger-binary:
+    enabled: false
+  jaeger-compact:
+    enabled: false
+  jaeger-grpc:
+    enabled: false
+  jaeger-http:
+    enabled: false
+  zipkin:
+    enabled: false
+
+
+# Base collector configuration
+config:
+  receivers:
+    filelog:
+      include: ["*.log"]
+    otlp:
+      protocols:
+        grpc:
+          endpoint: "${env:MY_POD_IP}:4317"
+        http:
+          endpoint: "${env:MY_POD_IP}:4319"
+    otlp/browser:
+      protocols:
+        http:
+          endpoint: "${env:MY_POD_IP}:4318"
+          cors:
+            allowed_origins:
+              - "*"
+    prometheus:
+      config:
+        scrape_configs:
+          - job_name: opentelemetry-collector
+            scrape_interval: 10s
+            static_configs:
+              - targets:
+                  - ${env:MY_POD_IP}:8888
+
+  processors:
+    memory_limiter:
+      check_interval: 10s
+      limit_percentage: 70
+      spike_limit_percentage: 25
+    resourcedetection:
+      detectors: [env, eks]
+      timeout: 2s
+      override: false
+
+  exporters:
+    otlp:
+      endpoint: api.honeycomb.io:443
+      headers:
+        "x-honeycomb-team": "${HONEYCOMB_API_KEY}"
+    otlp/logs:
+      endpoint: api.honeycomb.io:443
+      headers:
+        "x-honeycomb-team": "${HONEYCOMB_API_KEY}"
+        "x-honeycomb-dataset": microservices-logs
+    otlp/browser:
+      endpoint: api.honeycomb.io:443
+      headers:
+        "x-honeycomb-team": "${HONEYCOMB_API_KEY}"
+        "x-honeycomb-dataset": microservices-browser
+    otlp/metrics:
+      endpoint: api.honeycomb.io:443
+      headers:
+        "x-honeycomb-team": "${HONEYCOMB_API_KEY}"
+        "x-honeycomb-dataset": microservices-metrics
+    otlp/otelmetrics:
+      endpoint: api.honeycomb.io:443
+      headers:
+        "x-honeycomb-team": "${HONEYCOMB_API_KEY}"
+        "x-honeycomb-dataset": otel-collector-metrics
+
+  service:
+    extensions: [ health_check ]
+    pipelines:
+      traces:
+        receivers: [ otlp ]
+        processors: [ memory_limiter, resourcedetection, batch ]
+        exporters: [ otlp ]
+      traces/browser:
+        receivers: [ otlp/browser ]
+        processors: [ memory_limiter, resourcedetection, batch ]
+        exporters: [ otlp/browser ]
+      metrics:
+        receivers: [ otlp ]
+        processors: [ memory_limiter, resourcedetection, batch ]
+        exporters: [ otlp/metrics ]
+      metrics/otelmetrics:
+        receivers: [ prometheus ]
+        processors: [ memory_limiter, resourcedetection, batch ]
+        exporters: [ otlp/otelmetrics ]
+      logs:
+        receivers: [otlp]
+        processors: [memory_limiter, resourcedetection]
+        exporters: [otlp/logs]
+        

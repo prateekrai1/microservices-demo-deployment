@@ -1,0 +1,68 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+   name: adservice
+spec:
+  selector:
+    matchLabels:
+      app: adservice
+  template:
+    metadata:
+      name: adservice-pod
+      labels:
+        app: adservice
+    spec:
+      serviceAccountName: default
+      terminationGracePeriodSeconds: 5
+      containers:
+      - name: server
+        image: prateekrai642/adservice:3699368-dirty
+        ports:
+        - containerPort: 9555
+        env:
+        - name: PORT
+          value: "9555"
+        - name: POD_IP
+          valueFrom:
+            fieldRef:
+              fieldPath: status.podIP
+        - name: HONEYCOMB_API_KEY
+          valueFrom:
+            secretKeyRef:
+              name: honeycomb
+              key: api-key
+        - name: OTEL_EXPORTER_OTLP_TRACES_PROTOCOL
+          value: grpc
+        - name: OTEL_EXPORTER_OTLP_LOGS_PROTOCOL
+          value: grpc
+        - name: OTEL_TRACES_EXPORTER
+          value: otlp
+        - name: OTEL_EXPORTER_OTLP_ENDPOINT
+          value: http://opentelemetry-collector:4317
+        - name: OTEL_LOGS_EXPORTER
+          value: otlp
+        - name: OTEL_SERVICE_NAME
+          value: adservice
+        - name: OTEL_RESOURCE_ATTRIBUTES
+          value: ip=$(POD_IP)
+        resources:
+          requests:
+            cpu: 250m
+            memory: 180Mi
+          limits:
+            cpu: 500m
+            memory: 300Mi
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: adservice
+spec:
+  type: ClusterIP
+  selector:
+    app: adservice
+  ports:
+  - name: grpc
+    port: 9555
+    targetPort: 9555      
+
