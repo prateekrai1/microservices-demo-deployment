@@ -14,7 +14,7 @@ spec:
       serviceAccountName: default
       containers:
       - name: server
-        image: shippingservice
+        image: prateekrai642/shippingservice:3699368-dirty
         ports:
         - containerPort: 50051
         env:
@@ -60,4 +60,5 @@ spec:
   ports:
   - name: grpc
     port: 50051
+
     targetPort: 50051
